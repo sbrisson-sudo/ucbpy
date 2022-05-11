@@ -1,0 +1,63 @@
+CC	= gcc
+LD	= gcc
+
+PREFIX	= ..
+
+# example PYTHONROOT on OS X: /Library/Frameworks/EPD64.framework/Versions/Current (2.7)
+PYTHONROOT = /home/sylvain/anaconda3
+PYTHONVERSION = 3.8
+
+all: _pyspl_driver.so
+
+pyspl_driver.py: pyspl_driver_wrap.c
+
+pyspl_driver_wrap.c: pyspl_driver.i spl_driver.h numpy.i
+	swig -python -py3 pyspl_driver.i
+
+pyspl_driver_wrap.o: pyspl_driver_wrap.c
+	$(CC) -pthread -O2 -fPIC \
+		-I${PYTHONROOT}/include \
+		-I${PYTHONROOT}/include/python${PYTHONVERSION} \
+		-I${PYTHONROOT}/lib/python${PYTHONVERSION}/site-packages/numpy/core/include \
+		-c pyspl_driver_wrap.c \
+		-o pyspl_driver_wrap.o
+
+bspl.o: bspl.c 
+	$(CC) -O2 -fPIC \
+		-c bspl.c \
+		-o bspl.o
+
+sspl.o: sspl.c 
+	$(CC) -O2 -fPIC \
+		-c sspl.c \
+		-o sspl.o
+
+spl_driver.o: sspl.h bspl.h
+	$(CC) -O2 -fPIC \
+		-c spl_driver.c \
+		-o spl_driver.o
+
+_pyspl_driver.so: pyspl_driver_wrap.o sspl.o bspl.o spl_driver.o
+	$(CC) -pthread -shared \
+		pyspl_driver_wrap.o sspl.o bspl.o spl_driver.o \
+		-L${PYTHONROOT}/lib \
+		-lpython${PYTHONVERSION} -lm \
+		-o _pyspl_driver.so
+
+.PHONY: clean
+clean:
+	rm -f sspl.o bspl.o spl_driver.o pyspl_driver.py _pyspl_driver.so pyspl_driver_wrap.c pyspl_driver_wrap.o
+	@echo
+	@echo "Reminder: files possibly installed to $(PREFIX) have not been removed!"
+	@echo
+
+.PHONY: install
+install: pyspl.py pyspl_driver.py _pyspl_driver.so
+	cp pyspl.py pyspl_driver.py _pyspl_driver.so $(PREFIX)/
+
+.PHONY: uninstall
+uninstall:
+	rm -f $(PREFIX)/pyspl.py
+	rm -f $(PREFIX)/pyspl_driver.py
+	rm -f $(PREFIX)/_pyspl_driver.so
+
