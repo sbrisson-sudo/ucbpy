@@ -71,7 +71,7 @@ class SphericalSplines:
         return 'SphericalSplines: %i spline knots' % (self._N)
     # getters / setters ...
     def get_knots_and_levels(self):
-        return self._knots, self._levels
+        return self._knot_lons,self._knot_lats, self._levels
     def set_knots_and_levels(self, knot_lons, knot_lats, knot_levels):
         self._knot_lons = np.asarray(knot_lons).flatten()
         self._knot_lats = np.asarray(knot_lats).flatten()
